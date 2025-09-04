@@ -1,0 +1,14 @@
+*.npy
+*.pt
+*.pth
+*.zip
+*.png
+*.jpg
+*.jpeg
+*.JPG
+*.PNG
+.idea/
+*/__pycache__
+__pycache__
+experiments/*
+checkpoints/*
