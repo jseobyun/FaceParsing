@@ -128,6 +128,7 @@ class FaceParsingDataset(Dataset):
         # Open image and segmentation
         image = Image.open(img_path).convert('RGB')
         segmentation = Image.open(seg_path).convert('L')  # Load as grayscale (labels)
+        segmentation = self.__update_labels(segmentation)
         
         # Apply synchronized transforms
         if self.augmentation and self.split == 'train':
