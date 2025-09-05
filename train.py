@@ -14,13 +14,13 @@ def parse_args():
     parser = argparse.ArgumentParser(description='Train Face Parsing Model')
     
     # Data arguments
-    parser.add_argument('--data_dir', type=str, default='/media/jseob/SSD_HEAD/synthface/dataset_100000',
+    parser.add_argument('--data_dir', type=str, default='/media/idc-r2w2/data_sdc/jseob/data/synthface/dataset_100000',
                         help='Path to data directory')
     parser.add_argument('--image_size', type=int, nargs=2, default=[512, 512],
                         help='Input image size (height, width)')
     
     # Model arguments
-    parser.add_argument('--num_classes', type=int, default=19,
+    parser.add_argument('--num_classes', type=int, default=11,
                         help='Number of segmentation classes')
     parser.add_argument('--learning_rate', type=float, default=1e-3,
                         help='Learning rate')
@@ -103,7 +103,7 @@ def main():
         batch_size=args.batch_size,
         num_workers=args.num_workers,
         pin_memory=torch.cuda.is_available(),
-        augmentation=True
+        augmentation=True# ugly hack to not show parameters to DDP    
     )
     
     # Create model
@@ -134,7 +134,7 @@ def main():
         devices=args.gpus if args.accelerator == 'gpu' else 'auto',
         callbacks=callbacks,
         logger=logger,
-        precision='16-mixed' if torch.cuda.is_available() else 32,
+        precision=32,
         gradient_clip_val=1.0,
         accumulate_grad_batches=1,
         log_every_n_steps=10,

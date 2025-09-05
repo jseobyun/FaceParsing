@@ -15,7 +15,7 @@ class FaceParsingModel(pl.LightningModule):
     
     def __init__(
         self,
-        num_classes: int = 19,  # CelebAMask-HQ has 19 classes
+        num_classes: int = 11,  # Ours has 11 labels
         learning_rate: float = 1e-3,
         weight_decay: float = 1e-4,
         scheduler_config: Optional[Dict[str, Any]] = None

@@ -13,11 +13,11 @@ def parse_args():
     """Parse command line arguments."""
     parser = argparse.ArgumentParser(description='Face Parsing Inference')
     
-    parser.add_argument('--input', type=str, required=True,
+    parser.add_argument('--input_dir', type=str, default="/media/jseob/X9/renderme360/processed/0609/e0/frames/000",
                         help='Path to input image or directory')
-    parser.add_argument('--output', type=str, default='./outputs',
+    parser.add_argument('--output_dir', type=str, default='./outputs',
                         help='Path to output directory')
-    parser.add_argument('--checkpoint', type=str, required=True,
+    parser.add_argument('--checkpoint', type=str, default="experiments/checkpoints/last-v1.ckpt",
                         help='Path to model checkpoint')
     parser.add_argument('--device', type=str, default='cuda' if torch.cuda.is_available() else 'cpu',
                         help='Device to run inference on')
@@ -105,7 +105,7 @@ class FaceParsingInference:
         
         # Run inference
         with torch.no_grad():
-            logits = self.model(image_tensor)
+            logits = self.model(image_tensor)["probabilities"]
             pred_mask = torch.argmax(logits, dim=1)
         
         # Resize to original size
@@ -173,19 +173,17 @@ class FaceParsingInference:
         for image_path in image_files:
             print(f"Processing {image_path.name}...")
             
-            try:
-                pred_mask, image_tensor = self.predict(str(image_path))
-                self.save_results(
-                    str(image_path),
-                    pred_mask,
-                    image_tensor,
-                    output_dir,
-                    save_overlay,
-                    alpha
-                )
-            except Exception as e:
-                print(f"Error processing {image_path.name}: {e}")
-                continue
+            
+            pred_mask, image_tensor = self.predict(str(image_path))
+            self.save_results(
+                str(image_path),
+                pred_mask,
+                image_tensor,
+                output_dir,
+                save_overlay,
+                alpha
+            )
+            
 
 
 def main():
@@ -201,7 +199,7 @@ def main():
     )
     
     # Check if input is file or directory
-    input_path = Path(args.input)
+    input_path = Path(args.input_dir)
     
     if input_path.is_file():
         # Process single image
@@ -211,7 +209,7 @@ def main():
             str(input_path),
             pred_mask,
             image_tensor,
-            args.output,
+            args.output_dir,
             args.save_overlay,
             args.alpha
         )
@@ -219,7 +217,7 @@ def main():
         # Process directory
         inference.process_directory(
             str(input_path),
-            args.output,
+            args.output_dir,
             args.save_overlay,
             args.alpha
         )

@@ -7,8 +7,46 @@ from typing import Optional, Dict, Any, Tuple
 from pathlib import Path
 import numpy as np
 from PIL import Image
+from enum import Enum
 import random
 import torchvision.transforms.functional as TF
+
+
+class SynthFaceLabel(Enum):
+    BACKGROUND = 0
+    SKIN = 1
+    NOSE = 2
+    RIGHT_EYE = 3
+    LEFT_EYE = 4
+    RIGHT_BROW = 5
+    LEFT_BROW = 6
+    RIGHT_EAR = 7
+    LEFT_EAR = 8
+    MOUTH_INTERIOR = 9
+    TOP_LIP = 10
+    BOTTOM_LIP = 11
+    NECK = 12
+    HAIR = 13
+    BEARD = 14
+    CLOTHING = 15
+    GLASSES = 16
+    HEADWEAR = 17
+    FACEWEAR = 18
+    IGNORE = 255
+
+class OurFaceLabel(Enum):
+    BACKGROUND = 0
+    SKIN = 1
+    EYE = 2    
+    EYE_BROW = 3
+    EAR = 4
+    MOUTH_INTERIOR = 5
+    TOP_LIP = 6
+    BOTTOM_LIP = 7
+    HAIR = 8
+    BEARD = 9
+    ACCESSORY = 10
+    IGNORE = 255
 
 
 class FaceParsingDataset(Dataset):
@@ -37,7 +75,7 @@ class FaceParsingDataset(Dataset):
 
         img_names = sorted(os.listdir(img_dir))
         if split != "train":
-            img_names = img_names[::1000]
+            img_names = img_names[::100]
         for img_name in img_names:
             img_path = os.path.join(img_dir, img_name)
             seg_path = os.path.join(seg_dir, img_name.replace(".png", "_seg.png"))
@@ -48,6 +86,34 @@ class FaceParsingDataset(Dataset):
     
     def __len__(self):
         return len(self.img_paths)
+    
+    def __update_labels(self, segmentation):
+        segmentation = np.asarray(segmentation)
+
+        ### SKIN 
+        segmentation[segmentation == SynthFaceLabel.BACKGROUND] = OurFaceLabel.BACKGROUND
+        segmentation[segmentation == SynthFaceLabel.SKIN] = OurFaceLabel.SKIN
+        segmentation[segmentation == SynthFaceLabel.NOSE] = OurFaceLabel.SKIN
+        segmentation[segmentation == SynthFaceLabel.RIGHT_EYE] = OurFaceLabel.EYE
+        segmentation[segmentation == SynthFaceLabel.LEFT_EYE] = OurFaceLabel.EYE
+        segmentation[segmentation == SynthFaceLabel.RIGHT_BROW] = OurFaceLabel.EYE_BROW
+        segmentation[segmentation == SynthFaceLabel.LEFT_BROW] = OurFaceLabel.EYE_BROW
+        segmentation[segmentation == SynthFaceLabel.RIGHT_EAR] = OurFaceLabel.EAR
+        segmentation[segmentation == SynthFaceLabel.LEFT_EAR] = OurFaceLabel.EAR
+        segmentation[segmentation == SynthFaceLabel.MOUTH_INTERIOR] = OurFaceLabel.MOUTH_INTERIOR
+        segmentation[segmentation == SynthFaceLabel.TOP_LIP] = OurFaceLabel.TOP_LIP
+        segmentation[segmentation == SynthFaceLabel.BOTTOM_LIP] = OurFaceLabel.BOTTOM_LIP
+        segmentation[segmentation == SynthFaceLabel.NECK] = OurFaceLabel.SKIN
+        segmentation[segmentation == SynthFaceLabel.HAIR] = OurFaceLabel.HAIR
+        segmentation[segmentation == SynthFaceLabel.BEARD] = OurFaceLabel.BEARD
+        segmentation[segmentation == SynthFaceLabel.CLOTHING] = OurFaceLabel.BACKGROUND
+        segmentation[segmentation == SynthFaceLabel.GLASSES] = OurFaceLabel.ACCESSORY
+        segmentation[segmentation == SynthFaceLabel.HEADWEAR] = OurFaceLabel.ACCESSORY
+        segmentation[segmentation == SynthFaceLabel.FACEWEAR] = OurFaceLabel.ACCESSORY
+        segmentation[segmentation == SynthFaceLabel.IGNORE] = OurFaceLabel.IGNORE
+
+        segmentation = Image.fromarray(segmentation).convert("L")
+        return segmentation
     
     def __getitem__(self, idx):
         """
@@ -116,8 +182,8 @@ class FaceParsingDataset(Dataset):
         image = normalize(image)
         
         # Ensure invalid labels are set to 255 (ignore index)
-        # Valid labels are 0-18, anything else becomes 255
-        segmentation[(segmentation < 0) | (segmentation >= 19)] = 255
+        # Valid labels are [0, 10], anything else becomes 255
+        segmentation[(segmentation < 0) | (segmentation >= 11)] = 255
         
         return image, segmentation
 
@@ -227,5 +293,5 @@ class FaceParsingDataModule(pl.LightningDataModule):
     
     def get_num_classes(self):
         """Return the number of classes in the dataset."""
-        # For CelebAMask-HQ dataset
-        return 19
+        # For Our configuration dataset
+        return 11

@@ -30,7 +30,11 @@ class Encoder(nn.Module):
             dinov3 = torch.hub.load(REPO_DIR, 'dinov3_vitl16', source='local', weights=MODEL_PATH).cuda()
 
         self.cnn = VGG19(pretrained=True)
-        self.dinov3 = [dinov3] # ugly hack to not show parameters to DDP    
+        self.dinov3 = dinov3 
+
+        self.dinov3.eval()
+        for p in self.dinov3.parameters():
+            p.requires_grad = False
     
     def train(self, mode: bool = True):
         return self.cnn.train(mode)
@@ -38,7 +42,7 @@ class Encoder(nn.Module):
     def extract_dino_feature(self, x):
         B,C,H,W = x.shape
         with torch.no_grad():
-            dinov3_features_16 = self.dinov3[0].forward_features(x)
+            dinov3_features_16 = self.dinov3.forward_features(x)
             features_16 = dinov3_features_16['x_norm_patchtokens'].permute(0,2,1).reshape(B,1024,H//16, W//16)
         return features_16
     
@@ -46,7 +50,7 @@ class Encoder(nn.Module):
         B,C,H,W = x.shape
         feature_pyramid = self.cnn(x)                        
         with torch.no_grad():                
-            dinov3_features_16 = self.dinov3[0].forward_features(x)
+            dinov3_features_16 = self.dinov3.forward_features(x)
             features_16 = dinov3_features_16['x_norm_patchtokens'].permute(0,2,1).reshape(B,1024,H//16, W//16)
             del dinov3_features_16
             feature_pyramid[16] = features_16
