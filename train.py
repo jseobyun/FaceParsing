@@ -14,7 +14,7 @@ def parse_args():
     parser = argparse.ArgumentParser(description='Train Face Parsing Model')
     
     # Data arguments
-    parser.add_argument('--data_dir', type=str, default='/media/idc-r2w2/data_sdc/jseob/data/synthface/dataset_100000',
+    parser.add_argument('--data_dir', type=str, default='/media/jseob/SSD_HEAD/synthface/dataset_100000',
                         help='Path to data directory')
     parser.add_argument('--image_size', type=int, nargs=2, default=[512, 512],
                         help='Input image size (height, width)')
@@ -28,7 +28,7 @@ def parse_args():
                         help='Weight decay for optimizer')
     
     # Training arguments
-    parser.add_argument('--batch_size', type=int, default=12,
+    parser.add_argument('--batch_size', type=int, default=4,
                         help='Batch size for training')
     parser.add_argument('--num_workers', type=int, default=4,
                         help='Number of data loading workers')

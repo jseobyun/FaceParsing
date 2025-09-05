@@ -9,7 +9,7 @@ import cv2
 class FaceParsingVisualizer:
     """Utility class for visualizing face parsing results."""
     
-    # CelebAMask-HQ color palette
+    # our color palette
     PALETTE = [
         [0, 0, 0],       # background
         [204, 0, 0],     # skin
@@ -28,7 +28,7 @@ class FaceParsingVisualizer:
         [255, 51, 255],  # neck
         [0, 204, 204],   # neck_l
         [0, 51, 0],      # cloth
-        [255, 153, 51],  # hair
+        [255, 255, 255],  # hair
         [0, 204, 0]      # hat
     ]
     
@@ -39,7 +39,7 @@ class FaceParsingVisualizer:
     ]
     
     @staticmethod
-    def mask_to_colormap(mask: np.ndarray, num_classes: int = 19) -> np.ndarray:
+    def mask_to_colormap(mask: np.ndarray, num_classes: int = 11) -> np.ndarray:
         """
         Convert segmentation mask to color image.
         

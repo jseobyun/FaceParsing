@@ -132,7 +132,7 @@ class Decoder(nn.Module):
     - Scale 16: DINOv3 features (channels: 1024)
     """
     
-    def __init__(self, num_classes: int = 19, decoder_channels: int = 256):
+    def __init__(self, num_classes: int = 11, decoder_channels: int = 256):
         super().__init__()
         
         self.num_classes = num_classes
@@ -306,7 +306,7 @@ if __name__ == "__main__":
     }
     
     # Create decoder
-    decoder = Decoder(num_classes=19)
+    decoder = Decoder(num_classes=11)
     
     # Set to eval mode for testing
     decoder.eval()

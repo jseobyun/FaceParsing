@@ -1,4 +1,5 @@
 import os
+import cv2
 import pytorch_lightning as pl
 from torch.utils.data import DataLoader, Dataset
 from torchvision import transforms
@@ -7,12 +8,11 @@ from typing import Optional, Dict, Any, Tuple
 from pathlib import Path
 import numpy as np
 from PIL import Image
-from enum import Enum
 import random
 import torchvision.transforms.functional as TF
+from src.utils.visualization import FaceParsingVisualizer
 
-
-class SynthFaceLabel(Enum):
+class SynthFaceLabel():
     BACKGROUND = 0
     SKIN = 1
     NOSE = 2
@@ -34,7 +34,7 @@ class SynthFaceLabel(Enum):
     FACEWEAR = 18
     IGNORE = 255
 
-class OurFaceLabel(Enum):
+class OurFaceLabel():
     BACKGROUND = 0
     SKIN = 1
     EYE = 2    
@@ -88,9 +88,8 @@ class FaceParsingDataset(Dataset):
         return len(self.img_paths)
     
     def __update_labels(self, segmentation):
-        segmentation = np.asarray(segmentation)
-
-        ### SKIN 
+        segmentation = np.asarray(segmentation).copy()
+        
         segmentation[segmentation == SynthFaceLabel.BACKGROUND] = OurFaceLabel.BACKGROUND
         segmentation[segmentation == SynthFaceLabel.SKIN] = OurFaceLabel.SKIN
         segmentation[segmentation == SynthFaceLabel.NOSE] = OurFaceLabel.SKIN
@@ -110,7 +109,7 @@ class FaceParsingDataset(Dataset):
         segmentation[segmentation == SynthFaceLabel.GLASSES] = OurFaceLabel.ACCESSORY
         segmentation[segmentation == SynthFaceLabel.HEADWEAR] = OurFaceLabel.ACCESSORY
         segmentation[segmentation == SynthFaceLabel.FACEWEAR] = OurFaceLabel.ACCESSORY
-        segmentation[segmentation == SynthFaceLabel.IGNORE] = OurFaceLabel.IGNORE
+        segmentation[segmentation == SynthFaceLabel.IGNORE] = OurFaceLabel.IGNORE       
 
         segmentation = Image.fromarray(segmentation).convert("L")
         return segmentation
