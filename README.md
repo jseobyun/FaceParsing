@@ -25,7 +25,7 @@ The DINOv3 weights (`dinov3_vitl16_pretrain_lvd1689m-8aa4cbdd.pth`) are from the
 - Place the weights in: `checkpoints/dinov3_vitl16_pretrain_lvd1689m-8aa4cbdd.pth`
 
 ### Decoder Weights
-Only the decoder weights are provided in this repository (`experiments/checkpoints/decoder.ckpt`). These weights include:
+Only the [decoder weights](https://drive.google.com/drive/folders/1qvMJ418YFywkksFhPFsjldYpgBwOO8RH?usp=drive_link) are provided in this repository (`experiments/checkpoints/decoder.ckpt`). These weights include:
 - Custom decoder layers
 - VGG19 CNN encoder (pretrained and fine-tuned)
 - All training-specific parameters
