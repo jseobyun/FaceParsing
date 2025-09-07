@@ -13,19 +13,21 @@ def parse_args():
     """Parse command line arguments."""
     parser = argparse.ArgumentParser(description='Face Parsing Inference')
     
-    parser.add_argument('--input_dir', type=str, default="/media/jseob/X9/renderme360/processed/0609/e0/frames/000",
+    parser.add_argument('--input_dir', type=str, default="/media/jseob/X9/renderme360/processed/0027/e0/frames/000",
                         help='Path to input image or directory')
     parser.add_argument('--output_dir', type=str, default='./outputs',
                         help='Path to output directory')
-    parser.add_argument('--checkpoint', type=str, default="experiments/checkpoints/last-v1.ckpt",
-                        help='Path to model checkpoint')
+    parser.add_argument('--checkpoint', type=str, default="experiments/checkpoints/decoder.ckpt",
+                        help='Path to decoder checkpoint (without dinov3)')
+    parser.add_argument('--dinov3_checkpoint', type=str, default="checkpoints/dinov3_vitl16_pretrain_lvd1689m-8aa4cbdd.pth",
+                        help='Path to dinov3 checkpoint')
     parser.add_argument('--device', type=str, default='cuda' if torch.cuda.is_available() else 'cpu',
                         help='Device to run inference on')
     parser.add_argument('--image_size', type=int, nargs=2, default=[512, 512],
                         help='Input image size (height, width)')
-    parser.add_argument('--num_classes', type=int, default=19,
+    parser.add_argument('--num_classes', type=int, default=11,
                         help='Number of segmentation classes')
-    parser.add_argument('--save_overlay', action='store_true',
+    parser.add_argument('--save_overlay', action='store_true', default=True,
                         help='Save overlay visualization')
     parser.add_argument('--alpha', type=float, default=0.5,
                         help='Transparency for overlay visualization')
@@ -39,16 +41,17 @@ class FaceParsingInference:
     def __init__(
         self,
         checkpoint_path: str,
+        dinov3_checkpoint_path: str = None,
         device: str = 'cuda',
         image_size: tuple = (512, 512),
-        num_classes: int = 19
+        num_classes: int = 11
     ):
         self.device = torch.device(device)
         self.image_size = image_size
         self.num_classes = num_classes
         
         # Load model
-        self.model = self._load_model(checkpoint_path)
+        self.model = self._load_model(checkpoint_path, dinov3_checkpoint_path)
         
         # Setup transforms
         self.transform = transforms.Compose([
@@ -60,19 +63,40 @@ class FaceParsingInference:
         # Visualizer
         self.visualizer = FaceParsingVisualizer()
     
-    def _load_model(self, checkpoint_path: str):
-        """Load model from checkpoint."""
-        # Load checkpoint
+    def _load_model(self, checkpoint_path: str, dinov3_checkpoint_path: str = None):
+        """Load model from checkpoint with separate dinov3 loading."""
+        # Load dinov3 model first
+        if dinov3_checkpoint_path:
+            print(f"Loading DINOv3 from {dinov3_checkpoint_path}")
+            REPO_DIR = "src/models/"
+            dinov3 = torch.hub.load(REPO_DIR, 'dinov3_vitl16', source='local', 
+                                   weights=dinov3_checkpoint_path)
+            dinov3 = dinov3.to(self.device)
+        else:
+            dinov3 = None
+            
+        # Load decoder checkpoint
+        print(f"Loading decoder weights from {checkpoint_path}")
         checkpoint = torch.load(checkpoint_path, map_location=self.device)
         
         # Create model
         model = FaceParsingModel(num_classes=self.num_classes)
         
-        # Load state dict
+        # Set dinov3 in encoder if provided
+        if dinov3 is not None:
+            model.encoder.dinov3 = dinov3
+            model.encoder.dinov3.eval()
+            for p in model.encoder.dinov3.parameters():
+                p.requires_grad = False
+        
+        # Load state dict (decoder and CNN encoder weights)
         if 'state_dict' in checkpoint:
-            model.load_state_dict(checkpoint['state_dict'])
+            # Filter out any remaining dinov3 keys if they exist
+            state_dict = {k: v for k, v in checkpoint['state_dict'].items() 
+                         if 'encoder.dinov3' not in k}
+            model.load_state_dict(state_dict, strict=False)
         else:
-            model.load_state_dict(checkpoint)
+            model.load_state_dict(checkpoint, strict=False)
         
         model.to(self.device)
         model.eval()
@@ -135,14 +159,14 @@ class FaceParsingInference:
         
         # Save segmentation mask
         mask_np = pred_mask.squeeze().cpu().numpy()
-        mask_color = self.visualizer.mask_to_colormap(mask_np)
+        mask_color = self.visualizer.mask_to_colormap(mask_np)        
         mask_image = Image.fromarray(mask_color)
         mask_image.save(output_dir / f"{base_name}_mask.png")
         
         # Save overlay if requested
         if save_overlay:
             vis_array = self.visualizer.visualize_prediction(
-                image_tensor.squeeze(),
+                image_path,
                 pred_mask.squeeze(),
                 alpha=alpha,
                 save_path=str(output_dir / f"{base_name}_visualization.png")
@@ -193,6 +217,7 @@ def main():
     # Create inference object
     inference = FaceParsingInference(
         checkpoint_path=args.checkpoint,
+        dinov3_checkpoint_path=args.dinov3_checkpoint,
         device=args.device,
         image_size=tuple(args.image_size),
         num_classes=args.num_classes

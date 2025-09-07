@@ -28,6 +28,8 @@ class Encoder(nn.Module):
             REPO_DIR = "src/models/"
             MODEL_PATH = "checkpoints/dinov3_vitl16_pretrain_lvd1689m-8aa4cbdd.pth"
             dinov3 = torch.hub.load(REPO_DIR, 'dinov3_vitl16', source='local', weights=MODEL_PATH).cuda()
+        else:
+            dinov3 = dinov3_weights
 
         self.cnn = VGG19(pretrained=True)
         self.dinov3 = dinov3 

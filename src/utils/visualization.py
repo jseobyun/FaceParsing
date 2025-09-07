@@ -91,7 +91,7 @@ class FaceParsingVisualizer:
     
     @staticmethod
     def visualize_prediction(
-        image: torch.Tensor,
+        image_path: str,
         pred_mask: torch.Tensor,
         gt_mask: Optional[torch.Tensor] = None,
         alpha: float = 0.5,
@@ -110,13 +110,13 @@ class FaceParsingVisualizer:
         Returns:
             Visualization as numpy array
         """
-        # Convert to numpy
-        image_np = FaceParsingVisualizer.tensor_to_numpy(image)
+        # Convert to numpy        
         pred_np = FaceParsingVisualizer.tensor_to_numpy(pred_mask)
         
         # Convert to uint8
-        if image_np.dtype != np.uint8:
-            image_np = (image_np * 255).astype(np.uint8)
+        
+        image_np = cv2.imread(image_path)
+        image_np = cv2.cvtColor(image_np, cv2.COLOR_BGR2RGB)
         
         # Get color masks
         pred_color = FaceParsingVisualizer.mask_to_colormap(pred_np.astype(np.int32))
