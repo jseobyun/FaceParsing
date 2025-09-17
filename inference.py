@@ -1,7 +1,10 @@
+import os
+import cv2
 import argparse
 import torch
 from pathlib import Path
 from PIL import Image
+from tqdm import tqdm
 import numpy as np
 from torchvision import transforms
 
@@ -13,7 +16,7 @@ def parse_args():
     """Parse command line arguments."""
     parser = argparse.ArgumentParser(description='Face Parsing Inference')
     
-    parser.add_argument('--input_dir', type=str, default="/media/jseob/X9/renderme360/processed/0027/e0/frames/000",
+    parser.add_argument('--input_dir', type=str, default="/media/jseob/3D-PHOTO-02/k_hairstyle_hqset/Training/pi3s/0023.에어/0866.CP566586_none/images",
                         help='Path to input image or directory')
     parser.add_argument('--output_dir', type=str, default='./outputs',
                         help='Path to output directory')
@@ -27,7 +30,7 @@ def parse_args():
                         help='Input image size (height, width)')
     parser.add_argument('--num_classes', type=int, default=11,
                         help='Number of segmentation classes')
-    parser.add_argument('--save_overlay', action='store_true', default=True,
+    parser.add_argument('--save_overlay', action='store_true', default=False,
                         help='Save overlay visualization')
     parser.add_argument('--alpha', type=float, default=0.5,
                         help='Transparency for overlay visualization')
@@ -114,7 +117,7 @@ class FaceParsingInference:
         
         return image_tensor, original_size
     
-    def predict(self, image_path: str):
+    def predict(self, image_paths):
         """
         Run inference on a single image.
         
@@ -125,61 +128,71 @@ class FaceParsingInference:
             Predicted segmentation mask
         """
         # Preprocess image
-        image_tensor, original_size = self.preprocess_image(image_path)
+
+        image_tensors = []
+        for image_path in image_paths:
+            image_tensor, original_size = self.preprocess_image(image_path)
+            image_tensors.append(image_tensor)
+        
+        image_tensors = torch.cat(image_tensors, dim=0)
         
         # Run inference
         with torch.no_grad():
-            logits = self.model(image_tensor)["probabilities"]
+            logits = self.model(image_tensors)["probabilities"]
             pred_mask = torch.argmax(logits, dim=1)
         
         # Resize to original size
-        pred_mask = torch.nn.functional.interpolate(
-            pred_mask.unsqueeze(1).float(),
-            size=original_size[::-1],  # PIL uses (W, H), torch uses (H, W)
-            mode='nearest'
-        ).squeeze(1).long()
+        # pred_mask = torch.nn.functional.interpolate(
+        #     pred_mask.unsqueeze(1).float(),
+        #     size=original_size[::-1],  # PIL uses (W, H), torch uses (H, W)
+        #     mode='nearest'
+        # ).squeeze(1).long()
         
-        return pred_mask, image_tensor
+        return pred_mask
     
     def save_results(
         self,
-        image_path: str,
-        pred_mask: torch.Tensor,
-        image_tensor: torch.Tensor,
+        image_paths,
+        pred_masks: torch.Tensor,        
         output_dir: str,
         save_overlay: bool = True,
         alpha: float = 0.5
     ):
-        """Save prediction results."""
-        output_dir = Path(output_dir)
-        output_dir.mkdir(parents=True, exist_ok=True)
+        """Save prediction results."""        
         
+        os.makedirs(output_dir, exist_ok=True)
         # Get base name
-        base_name = Path(image_path).stem
-        
-        # Save segmentation mask
-        mask_np = pred_mask.squeeze().cpu().numpy()
-        mask_color = self.visualizer.mask_to_colormap(mask_np)        
-        mask_image = Image.fromarray(mask_color)
-        mask_image.save(output_dir / f"{base_name}_mask.png")
-        
-        # Save overlay if requested
-        if save_overlay:
-            vis_array = self.visualizer.visualize_prediction(
-                image_path,
-                pred_mask.squeeze(),
-                alpha=alpha,
-                save_path=str(output_dir / f"{base_name}_visualization.png")
-            )
-        
-        print(f"Results saved to {output_dir}")
+        for img_idx, image_path in enumerate(image_paths):
+            base_name = Path(image_path).stem
+            
+            # Save segmentation mask
+            mask_np = pred_masks[img_idx].squeeze().cpu().numpy()
+            mask_cv = mask_np.astype(np.uint8)
+            cv2.imwrite(os.path.join(output_dir, base_name+".jpg"), mask_cv)
+
+            # mask_color = self.visualizer.mask_to_colormap(mask_np)        
+            # mask_image = Image.fromarray(mask_color)
+            # mask_image.save(output_dir / f"{base_name}_mask.png")
+            
+            # Save overlay if requested
+            if save_overlay:
+                vis_array = self.visualizer.visualize_prediction(
+                    image_path,
+                    pred_masks[img_idx].squeeze(),
+                    alpha=alpha,
+                    save_path=str(output_dir / f"{base_name}_visualization.png")
+                )
+            
+            # print(f"Results saved to {output_dir}")
     
     def process_directory(
         self,
         input_dir: str,
         output_dir: str,
         save_overlay: bool = True,
-        alpha: float = 0.5
+        alpha: float = 0.5,
+        batch_size = 1,
+
     ):
         """Process all images in a directory."""
         input_path = Path(input_dir)
@@ -192,17 +205,18 @@ class FaceParsingInference:
             image_files.extend(input_path.glob(f"*{ext.upper()}"))
         
         print(f"Found {len(image_files)} images to process")
-        
+        print(f"These will be processed with batch size {batch_size}")       
+       
+
+        num_imgs = len(image_files)
+
         # Process each image
-        for image_path in image_files:
-            print(f"Processing {image_path.name}...")
-            
-            
-            pred_mask, image_tensor = self.predict(str(image_path))
+        for img_idx in range(0, num_imgs, batch_size):
+            image_paths = image_files[img_idx:img_idx+batch_size]
+            pred_masks = self.predict(image_paths)
             self.save_results(
-                str(image_path),
-                pred_mask,
-                image_tensor,
+                image_paths,
+                pred_masks,                
                 output_dir,
                 save_overlay,
                 alpha
@@ -224,30 +238,17 @@ def main():
     )
     
     # Check if input is file or directory
-    input_path = Path(args.input_dir)
-    
-    if input_path.is_file():
-        # Process single image
-        print(f"Processing image: {input_path}")
-        pred_mask, image_tensor = inference.predict(str(input_path))
-        inference.save_results(
-            str(input_path),
-            pred_mask,
-            image_tensor,
-            args.output_dir,
-            args.save_overlay,
-            args.alpha
-        )
-    elif input_path.is_dir():
-        # Process directory
-        inference.process_directory(
-            str(input_path),
-            args.output_dir,
-            args.save_overlay,
-            args.alpha
-        )
-    else:
-        raise ValueError(f"Input path {input_path} does not exist")
+
+
+    # Process directory
+    inference.process_directory(
+        args.input_dir,
+        args.output_dir,
+        args.save_overlay,
+        args.alpha,
+        batch_size=16,
+    )
+
 
 
 if __name__ == '__main__':

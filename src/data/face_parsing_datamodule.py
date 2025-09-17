@@ -58,11 +58,13 @@ class FaceParsingDataset(Dataset):
     def __init__(
         self,
         data_dir: str,
+        num_classes: int,
         split: str = 'train',
         image_size: Tuple[int, int] = (512, 512),
         augmentation: bool = True
     ):
         self.data_dir = data_dir
+        self.num_classes = num_classes
         self.split = split
         self.image_size = image_size
         self.augmentation = augmentation and (split == 'train')
@@ -127,7 +129,8 @@ class FaceParsingDataset(Dataset):
         # Open image and segmentation
         image = Image.open(img_path).convert('RGB')
         segmentation = Image.open(seg_path).convert('L')  # Load as grayscale (labels)
-        segmentation = self.__update_labels(segmentation)
+        if self.num_classes != 19:
+            segmentation = self.__update_labels(segmentation)
         
         # Apply synchronized transforms
         if self.augmentation and self.split == 'train':
@@ -183,7 +186,7 @@ class FaceParsingDataset(Dataset):
         
         # Ensure invalid labels are set to 255 (ignore index)
         # Valid labels are [0, 10], anything else becomes 255
-        segmentation[(segmentation < 0) | (segmentation >= 11)] = 255
+        segmentation[(segmentation < 0) | (segmentation >= self.num_classes)] = 255
         
         return image, segmentation
 
@@ -197,6 +200,7 @@ class FaceParsingDataModule(pl.LightningDataModule):
     def __init__(
         self,
         data_dir: str = './data',
+        num_classes : int = 19,
         image_size: Tuple[int, int] = (512, 512),
         batch_size: int = 8,
         num_workers: int = 4,
@@ -208,6 +212,7 @@ class FaceParsingDataModule(pl.LightningDataModule):
         self.save_hyperparameters()
         
         self.data_dir = Path(data_dir)
+        self.num_classes = num_classes
         self.image_size = image_size
         self.batch_size = batch_size
         self.num_workers = num_workers
@@ -236,6 +241,7 @@ class FaceParsingDataModule(pl.LightningDataModule):
             # Setup training dataset
             self.train_dataset = FaceParsingDataset(
                 data_dir=self.data_dir,
+                num_classes=self.num_classes,
                 split='train',
                 image_size=self.image_size,
                 augmentation=self.augmentation
@@ -244,6 +250,7 @@ class FaceParsingDataModule(pl.LightningDataModule):
             # Setup validation dataset
             self.val_dataset = FaceParsingDataset(
                 data_dir=self.data_dir,
+                num_classes=self.num_classes,
                 split='val',
                 image_size=self.image_size,
                 augmentation=False
@@ -253,6 +260,7 @@ class FaceParsingDataModule(pl.LightningDataModule):
             # Setup test dataset
             self.test_dataset = FaceParsingDataset(
                 data_dir=self.data_dir,
+                num_classes=self.num_classes,
                 split='test',
                 image_size=self.image_size,
                 augmentation=False
@@ -294,4 +302,4 @@ class FaceParsingDataModule(pl.LightningDataModule):
     def get_num_classes(self):
         """Return the number of classes in the dataset."""
         # For Our configuration dataset
-        return 11
+        return self.num_classes

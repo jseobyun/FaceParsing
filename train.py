@@ -20,7 +20,7 @@ def parse_args():
                         help='Input image size (height, width)')
     
     # Model arguments
-    parser.add_argument('--num_classes', type=int, default=11,
+    parser.add_argument('--num_classes', type=int, default=19,
                         help='Number of segmentation classes')
     parser.add_argument('--learning_rate', type=float, default=1e-3,
                         help='Learning rate')
@@ -73,13 +73,13 @@ def setup_callbacks(args):
     callbacks.append(checkpoint_callback)
     
     # Early stopping callback
-    early_stopping = EarlyStopping(
-        monitor='val/loss',
-        patience=15,
-        mode='min',
-        verbose=True
-    )
-    callbacks.append(early_stopping)
+    # early_stopping = EarlyStopping(
+    #     monitor='val/loss',
+    #     patience=15,
+    #     mode='min',
+    #     verbose=True
+    # )
+    # callbacks.append(early_stopping)
     
     # Learning rate monitor
     lr_monitor = LearningRateMonitor(logging_interval='epoch')
@@ -99,6 +99,7 @@ def main():
     # Create data module
     data_module = FaceParsingDataModule(
         data_dir=args.data_dir,
+        num_classes=args.num_classes,
         image_size=tuple(args.image_size),
         batch_size=args.batch_size,
         num_workers=args.num_workers,

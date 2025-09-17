@@ -113,13 +113,18 @@ class FaceParsingVisualizer:
         # Convert to numpy        
         pred_np = FaceParsingVisualizer.tensor_to_numpy(pred_mask)
         
+        
+        
+        
+        # Get color masks
+        pred_color = FaceParsingVisualizer.mask_to_colormap(pred_np.astype(np.int32))
+        img_h, img_w = np.shape(pred_color)[:2]
+        
         # Convert to uint8
         
         image_np = cv2.imread(image_path)
         image_np = cv2.cvtColor(image_np, cv2.COLOR_BGR2RGB)
-        
-        # Get color masks
-        pred_color = FaceParsingVisualizer.mask_to_colormap(pred_np.astype(np.int32))
+        image_np = cv2.resize(image_np, dsize=(img_w, img_h))
         
         # Create overlay
         overlay = cv2.addWeighted(image_np, 1 - alpha, pred_color, alpha, 0)
