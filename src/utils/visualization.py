@@ -39,7 +39,7 @@ class FaceParsingVisualizer:
     ]
     
     @staticmethod
-    def mask_to_colormap(mask: np.ndarray, num_classes: int = 11) -> np.ndarray:
+    def mask_to_colormap(mask: np.ndarray, num_classes: int = 19) -> np.ndarray:
         """
         Convert segmentation mask to color image.
         

@@ -25,7 +25,7 @@ class FaceParsingModel(pl.LightningModule):
         
         # Network architecture will be defined here
         self.encoder = Encoder()
-        self.decoder = Decoder()
+        self.decoder = Decoder(num_classes=num_classes)
         
         # Loss function
         self.criterion = nn.CrossEntropyLoss(ignore_index=255)

@@ -53,9 +53,9 @@ def extract_decoder_weights(checkpoint_path: str, output_path: str):
 
 def main():
     parser = argparse.ArgumentParser(description='Extract decoder weights without dinov3')
-    parser.add_argument('--checkpoint', type=str, default='experiments/checkpoints/last.ckpt',
+    parser.add_argument('--checkpoint', type=str, default='experiments/checkpoints/last19.ckpt',
                         help='Path to full checkpoint')
-    parser.add_argument('--output', type=str, default='experiments/checkpoints/decoder.ckpt',
+    parser.add_argument('--output', type=str, default='experiments/checkpoints/decoder19.ckpt',
                         help='Path to save decoder-only checkpoint')
     
     args = parser.parse_args()

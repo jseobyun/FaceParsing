@@ -16,11 +16,11 @@ def parse_args():
     """Parse command line arguments."""
     parser = argparse.ArgumentParser(description='Face Parsing Inference')
     
-    parser.add_argument('--input_dir', type=str, default="/media/jseob/3D-PHOTO-02/k_hairstyle_hqset/Training/pi3s/0023.에어/0866.CP566586_none/images",
+    parser.add_argument('--input_dir', type=str, default="/home/jseob/Downloads/TEST/images/1253.CP908323",
                         help='Path to input image or directory')
     parser.add_argument('--output_dir', type=str, default='./outputs',
                         help='Path to output directory')
-    parser.add_argument('--checkpoint', type=str, default="experiments/checkpoints/decoder.ckpt",
+    parser.add_argument('--checkpoint', type=str, default="experiments/checkpoints/decoder19.ckpt",
                         help='Path to decoder checkpoint (without dinov3)')
     parser.add_argument('--dinov3_checkpoint', type=str, default="checkpoints/dinov3_vitl16_pretrain_lvd1689m-8aa4cbdd.pth",
                         help='Path to dinov3 checkpoint')
@@ -28,9 +28,9 @@ def parse_args():
                         help='Device to run inference on')
     parser.add_argument('--image_size', type=int, nargs=2, default=[512, 512],
                         help='Input image size (height, width)')
-    parser.add_argument('--num_classes', type=int, default=11,
+    parser.add_argument('--num_classes', type=int, default=19,
                         help='Number of segmentation classes')
-    parser.add_argument('--save_overlay', action='store_true', default=False,
+    parser.add_argument('--save_overlay', action='store_true', default=True,
                         help='Save overlay visualization')
     parser.add_argument('--alpha', type=float, default=0.5,
                         help='Transparency for overlay visualization')
@@ -168,7 +168,7 @@ class FaceParsingInference:
             # Save segmentation mask
             mask_np = pred_masks[img_idx].squeeze().cpu().numpy()
             mask_cv = mask_np.astype(np.uint8)
-            cv2.imwrite(os.path.join(output_dir, base_name+".jpg"), mask_cv)
+            # cv2.imwrite(os.path.join(output_dir, base_name+".jpg"), mask_cv)
 
             # mask_color = self.visualizer.mask_to_colormap(mask_np)        
             # mask_image = Image.fromarray(mask_color)
@@ -180,7 +180,7 @@ class FaceParsingInference:
                     image_path,
                     pred_masks[img_idx].squeeze(),
                     alpha=alpha,
-                    save_path=str(output_dir / f"{base_name}_visualization.png")
+                    save_path=os.path.join(output_dir, base_name+"_vis.jpg")
                 )
             
             # print(f"Results saved to {output_dir}")

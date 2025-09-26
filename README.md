@@ -8,6 +8,7 @@ A face parsing model that combines VGG19 CNN features with DINOv3 visual represe
   <img src="./assets/51_visualization.png" width="1200" height="400"/>
 </p>
 
+This example is the output of 11 face labels model. 
 
 ## Model Architecture
 
@@ -32,25 +33,57 @@ Only the [decoder weights](https://drive.google.com/drive/folders/1qvMJ418YFywkk
 
 The DINOv3 encoder is loaded separately to keep the checkpoint size manageable and respect the original model distribution.
 
-## OurFaceLabel
+## Face Parsing Labels
 
-This model uses a custom 11-class face parsing scheme called **OurFaceLabel**, which provides a simplified but effective segmentation of facial regions:
+This model supports two label schemes depending on the `num_classes` argument:
+
+### 19-Class Label Scheme (Default)
+The standard **19-class face parsing scheme** provides detailed segmentation of facial components:
 
 | Label | Class | Description |
 |-------|-------|-------------|
 | 0 | Background | Non-face regions |
-| 1 | Skin | Face and neck skin |
-| 2 | Eyes | Left and right eyes|
-| 3 | Eyebrows | Left and right eyebrows|
-| 4 | Ear | Left and right ears|
-| 5 | Mouth interior | Inside of the mouth |
+| 1 | Skin | Face skin |
+| 2 | Nose | Nose region |
+| 3 | Right Eye | Right eye |
+| 4 | Left Eye | Left eye |
+| 5 | Right Brow | Right eyebrow |
+| 6 | Left Brow | Left eyebrow |
+| 7 | Right Ear | Right ear |
+| 8 | Left Ear | Left ear |
+| 9 | Mouth Interior | Inside of the mouth |
+| 10 | Top Lip | Upper lip region |
+| 11 | Bottom Lip | Lower lip region |
+| 12 | Neck | Neck region |
+| 13 | Hair | Hair region |
+| 14 | Beard | Beard region |
+| 15 | Clothing | Clothing |
+| 16 | Glasses | Eyeglasses |
+| 17 | Headwear | Hat, cap, etc. |
+| 18 | Facewear | Face accessories |
+
+### 11-Class Label Scheme (Simplified)
+The **11-class OurFaceLabel** scheme provides a simplified but effective segmentation by merging similar regions:
+
+| Label | Class | Description |
+|-------|-------|-------------|
+| 0 | Background | Non-face regions |
+| 1 | Skin | Face, neck, and nose skin |
+| 2 | Eyes | Both left and right eyes |
+| 3 | Eyebrows | Both left and right eyebrows |
+| 4 | Ears | Both left and right ears |
+| 5 | Mouth Interior | Inside of the mouth |
 | 6 | Upper Lip | Upper lip region |
 | 7 | Lower Lip | Lower lip region |
 | 8 | Hair | Hair region |
-| 9 | Beard | Beard region|
-| 11 | Accessory | Head and face accessories|
+| 9 | Beard | Beard region |
+| 10 | Accessory | Glasses, headwear, and face accessories |
 
-I've simplified the labels compared to conventional 19 labels.
+The 11-class scheme simplifies the original 19 labels by:
+- Merging left/right components (eyes, eyebrows, ears)
+- Combining nose and neck into skin
+- Grouping all accessories together
+- Removing clothing from the segmentation
 
 ## Project Structure
 
@@ -98,18 +131,30 @@ pip install torch torchvision pytorch-lightning pillow numpy
 
 ### Inference
 
-Run inference on a single image:
+Run inference with **19-class segmentation** (default):
+```bash
+python inference.py --input_dir path/to/image.jpg \
+                   --output_dir outputs/ \
+                   --checkpoint experiments/checkpoints/decoder19.ckpt \
+                   --dinov3_checkpoint checkpoints/dinov3_vitl16_pretrain_lvd1689m-8aa4cbdd.pth \
+                   --num_classes 19
+```
+
+Run inference with **11-class simplified segmentation**:
 ```bash
 python inference.py --input_dir path/to/image.jpg \
                    --output_dir outputs/ \
                    --checkpoint experiments/checkpoints/decoder.ckpt \
-                   --dinov3_checkpoint checkpoints/dinov3_vitl16_pretrain_lvd1689m-8aa4cbdd.pth
+                   --dinov3_checkpoint checkpoints/dinov3_vitl16_pretrain_lvd1689m-8aa4cbdd.pth \
+                   --num_classes 11 \
+                   --save_overlay
 ```
 
 Run inference on a directory of images:
 ```bash
 python inference.py --input_dir path/to/images/ \
                    --output_dir outputs/ \
+                   --num_classes 19 \
                    --save_overlay
 ```
 
@@ -130,7 +175,9 @@ python extract_decoder_weights.py --checkpoint experiments/checkpoints/last.ckpt
 - `--dinov3_checkpoint`: Path to DINOv3 checkpoint (default: `checkpoints/dinov3_vitl16_pretrain_lvd1689m-8aa4cbdd.pth`)
 - `--device`: Device to run on (`cuda` or `cpu`)
 - `--image_size`: Input image size as height width (default: 512 512)
-- `--num_classes`: Number of segmentation classes (default: 11)
+- `--num_classes`: Number of segmentation classes (default: 19)
+  - Use `19` for detailed 19-class segmentation
+  - Use `11` for simplified OurFaceLabel segmentation
 - `--save_overlay`: Save overlay visualization
 - `--alpha`: Transparency for overlay visualization (default: 0.5)
 
@@ -149,11 +196,23 @@ For training details, refer to the training scripts in the repository. The model
 
 ### Training Command
 
+Train with 19-class segmentation (default):
 ```bash
 python train.py \
     --data_dir ./data \
     --batch_size 8 \
     --max_epochs 100 \
+    --num_classes 19 \
+    --gpus 1
+```
+
+Train with 11-class simplified segmentation:
+```bash
+python train.py \
+    --data_dir ./data \
+    --batch_size 8 \
+    --max_epochs 100 \
+    --num_classes 11 \
     --gpus 1
 ```
 
