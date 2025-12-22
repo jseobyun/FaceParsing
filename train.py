@@ -32,7 +32,7 @@ def parse_args():
                         help='Batch size for training')
     parser.add_argument('--num_workers', type=int, default=4,
                         help='Number of data loading workers')
-    parser.add_argument('--max_epochs', type=int, default=100,
+    parser.add_argument('--max_epochs', type=int, default=35,
                         help='Maximum number of training epochs')
     parser.add_argument('--gpus', type=int, default=4,
                         help='Number of GPUs to use')
@@ -135,7 +135,7 @@ def main():
         devices=args.gpus if args.accelerator == 'gpu' else 'auto',
         callbacks=callbacks,
         logger=logger,
-        precision=32,
+        precision="bf16-mixed",
         gradient_clip_val=1.0,
         accumulate_grad_batches=1,
         log_every_n_steps=10,

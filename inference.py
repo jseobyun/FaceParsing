@@ -16,13 +16,13 @@ def parse_args():
     """Parse command line arguments."""
     parser = argparse.ArgumentParser(description='Face Parsing Inference')
     
-    parser.add_argument('--input_dir', type=str, default="/home/jseob/Downloads/TEST/images/1253.CP908323",
+    parser.add_argument('--input_dir', type=str, default="/media/jseob/HUMAN_3D-PHOTO-01/hairstyle/images/0314.CP138295_none",
                         help='Path to input image or directory')
     parser.add_argument('--output_dir', type=str, default='./outputs',
                         help='Path to output directory')
     parser.add_argument('--checkpoint', type=str, default="experiments/checkpoints/decoder19.ckpt",
                         help='Path to decoder checkpoint (without dinov3)')
-    parser.add_argument('--dinov3_checkpoint', type=str, default="checkpoints/dinov3_vitl16_pretrain_lvd1689m-8aa4cbdd.pth",
+    parser.add_argument('--dinov3_checkpoint', type=str, default="checkpoints/dinov3_vitb16_pretrain_lvd1689m-73cec8be.pth",
                         help='Path to dinov3 checkpoint')
     parser.add_argument('--device', type=str, default='cuda' if torch.cuda.is_available() else 'cpu',
                         help='Device to run inference on')
@@ -47,7 +47,7 @@ class FaceParsingInference:
         dinov3_checkpoint_path: str = None,
         device: str = 'cuda',
         image_size: tuple = (512, 512),
-        num_classes: int = 11
+        num_classes: int = 19
     ):
         self.device = torch.device(device)
         self.image_size = image_size
@@ -72,7 +72,7 @@ class FaceParsingInference:
         if dinov3_checkpoint_path:
             print(f"Loading DINOv3 from {dinov3_checkpoint_path}")
             REPO_DIR = "src/models/"
-            dinov3 = torch.hub.load(REPO_DIR, 'dinov3_vitl16', source='local', 
+            dinov3 = torch.hub.load(REPO_DIR, 'dinov3_vitb16', source='local',
                                    weights=dinov3_checkpoint_path)
             dinov3 = dinov3.to(self.device)
         else:

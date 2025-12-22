@@ -34,21 +34,6 @@ class SynthFaceLabel():
     FACEWEAR = 18
     IGNORE = 255
 
-class OurFaceLabel():
-    BACKGROUND = 0
-    SKIN = 1
-    EYE = 2    
-    EYE_BROW = 3
-    EAR = 4
-    MOUTH_INTERIOR = 5
-    TOP_LIP = 6
-    BOTTOM_LIP = 7
-    HAIR = 8
-    BEARD = 9
-    ACCESSORY = 10
-    IGNORE = 255
-
-
 class FaceParsingDataset(Dataset):
     """
     Dataset class for Face Parsing task.
@@ -88,34 +73,7 @@ class FaceParsingDataset(Dataset):
     
     def __len__(self):
         return len(self.img_paths)
-    
-    def __update_labels(self, segmentation):
-        segmentation = np.asarray(segmentation).copy()
-        
-        segmentation[segmentation == SynthFaceLabel.BACKGROUND] = OurFaceLabel.BACKGROUND
-        segmentation[segmentation == SynthFaceLabel.SKIN] = OurFaceLabel.SKIN
-        segmentation[segmentation == SynthFaceLabel.NOSE] = OurFaceLabel.SKIN
-        segmentation[segmentation == SynthFaceLabel.RIGHT_EYE] = OurFaceLabel.EYE
-        segmentation[segmentation == SynthFaceLabel.LEFT_EYE] = OurFaceLabel.EYE
-        segmentation[segmentation == SynthFaceLabel.RIGHT_BROW] = OurFaceLabel.EYE_BROW
-        segmentation[segmentation == SynthFaceLabel.LEFT_BROW] = OurFaceLabel.EYE_BROW
-        segmentation[segmentation == SynthFaceLabel.RIGHT_EAR] = OurFaceLabel.EAR
-        segmentation[segmentation == SynthFaceLabel.LEFT_EAR] = OurFaceLabel.EAR
-        segmentation[segmentation == SynthFaceLabel.MOUTH_INTERIOR] = OurFaceLabel.MOUTH_INTERIOR
-        segmentation[segmentation == SynthFaceLabel.TOP_LIP] = OurFaceLabel.TOP_LIP
-        segmentation[segmentation == SynthFaceLabel.BOTTOM_LIP] = OurFaceLabel.BOTTOM_LIP
-        segmentation[segmentation == SynthFaceLabel.NECK] = OurFaceLabel.SKIN
-        segmentation[segmentation == SynthFaceLabel.HAIR] = OurFaceLabel.HAIR
-        segmentation[segmentation == SynthFaceLabel.BEARD] = OurFaceLabel.BEARD
-        segmentation[segmentation == SynthFaceLabel.CLOTHING] = OurFaceLabel.BACKGROUND
-        segmentation[segmentation == SynthFaceLabel.GLASSES] = OurFaceLabel.ACCESSORY
-        segmentation[segmentation == SynthFaceLabel.HEADWEAR] = OurFaceLabel.ACCESSORY
-        segmentation[segmentation == SynthFaceLabel.FACEWEAR] = OurFaceLabel.ACCESSORY
-        segmentation[segmentation == SynthFaceLabel.IGNORE] = OurFaceLabel.IGNORE       
 
-        segmentation = Image.fromarray(segmentation).convert("L")
-        return segmentation
-    
     def __getitem__(self, idx):
         """
         Load and return a sample from the dataset.
@@ -129,8 +87,6 @@ class FaceParsingDataset(Dataset):
         # Open image and segmentation
         image = Image.open(img_path).convert('RGB')
         segmentation = Image.open(seg_path).convert('L')  # Load as grayscale (labels)
-        if self.num_classes != 19:
-            segmentation = self.__update_labels(segmentation)
         
         # Apply synchronized transforms
         if self.augmentation and self.split == 'train':
