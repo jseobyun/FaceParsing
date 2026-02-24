@@ -7,6 +7,9 @@
 *.jpeg
 *.JPG
 *.PNG
+!assets/*.png
+!assets/*.jpg
+!assets/*.jpeg
 .idea/
 */__pycache__
 __pycache__
