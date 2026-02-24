@@ -21,15 +21,20 @@ class VGG19(nn.Module):
         return feats
 
 class Encoder(nn.Module):
-    def __init__(self, dinov3_weights = None):
+    def __init__(self, dinov3_weights = None, device = None):
         super().__init__()       
+        if device is None:
+            device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        else:
+            device = torch.device(device)
     
         if dinov3_weights is None:
             REPO_DIR = "src/models/"
             MODEL_PATH = "checkpoints/dinov3_vitb16_pretrain_lvd1689m-73cec8be.pth"
-            dinov3 = torch.hub.load(REPO_DIR, 'dinov3_vitb16', source='local', weights=MODEL_PATH).cuda()
+            dinov3 = torch.hub.load(REPO_DIR, 'dinov3_vitb16', source='local', weights=MODEL_PATH)
         else:
             dinov3 = dinov3_weights
+        dinov3 = dinov3.to(device)
 
         self.cnn = VGG19(pretrained=True)
         self.dinov3 = dinov3 

@@ -171,8 +171,13 @@ class FaceParsingVisualizer:
         
         # Convert figure to numpy array
         fig.canvas.draw()
-        vis_array = np.frombuffer(fig.canvas.tostring_rgb(), dtype=np.uint8)
-        vis_array = vis_array.reshape(fig.canvas.get_width_height()[::-1] + (3,))
+        canvas_width, canvas_height = fig.canvas.get_width_height()
+        if hasattr(fig.canvas, "tostring_rgb"):
+            buffer = fig.canvas.tostring_rgb()
+            vis_array = np.frombuffer(buffer, dtype=np.uint8).reshape(canvas_height, canvas_width, 3)
+        else:
+            buffer = fig.canvas.buffer_rgba()
+            vis_array = np.frombuffer(buffer, dtype=np.uint8).reshape(canvas_height, canvas_width, 4)[..., :3]
         
         plt.close()
         

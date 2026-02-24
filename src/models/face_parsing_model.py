@@ -3,7 +3,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torchmetrics import Accuracy, JaccardIndex
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, Union
 from .encoder import Encoder
 from .decoder import Decoder
 
@@ -18,13 +18,15 @@ class FaceParsingModel(pl.LightningModule):
         num_classes: int = 19,  
         learning_rate: float = 1e-3,
         weight_decay: float = 1e-4,
-        scheduler_config: Optional[Dict[str, Any]] = None
+        scheduler_config: Optional[Dict[str, Any]] = None,
+        encoder_device: Optional[Union[str, torch.device]] = None,
+        encoder_dinov3: Optional[nn.Module] = None,
     ):
         super().__init__()
-        self.save_hyperparameters()
+        self.save_hyperparameters(ignore=['encoder_dinov3'])
         
         # Network architecture will be defined here
-        self.encoder = Encoder()
+        self.encoder = Encoder(dinov3_weights=encoder_dinov3, device=encoder_device)
         self.decoder = Decoder(num_classes=num_classes)
         
         # Loss function

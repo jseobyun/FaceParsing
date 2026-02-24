@@ -4,8 +4,9 @@ A face parsing model that combines VGG19 CNN features with DINOv3 visual represe
 
 
 <p align="center">
-  <img src="./assets/21_visualization.png" width="1200" height="400"/>
-  <img src="./assets/51_visualization.png" width="1200" height="400"/>
+  <img src="./assets/002_vis.jpg" width="100%"/>
+  <img src="./assets/005_vis.jpg" width="100%"/>
+  <img src="./assets/012_vis.jpg" width="100%"/>
 </p>
 
 This example is the output of 19 face labels model. 
@@ -14,16 +15,16 @@ This example is the output of 19 face labels model.
 
 This model uses a dual-encoder architecture:
 - **CNN Encoder**: VGG19 backbone for multi-scale feature extraction
-- **Vision Transformer**: DINOv3 (ViT-L/16) for semantic feature extraction
+- **Vision Transformer**: DINOv3 (ViT-B/16) for semantic feature extraction
 - **Decoder**: Custom decoder that fuses features from both encoders
 
 ## Weights
 
 ### DINOv3 Weights
-The DINOv3 weights (`dinov3_vitl16_pretrain_lvd1689m-8aa4cbdd.pth`) are from the official DINOv3 repository and should be downloaded separately:
+The DINOv3 weights (`dinov3_vitb16_pretrain_lvd1689m-73cec8be.pth`) are from the official DINOv3 repository and should be downloaded separately:
 - Source: [Official DINOv3 Repository](https://github.com/facebookresearch/dinov3)
-- Model: ViT-L/16 pretrained on LVD-1689M dataset
-- Place the weights in: `checkpoints/dinov3_vitl16_pretrain_lvd1689m-8aa4cbdd.pth`
+- Model: ViT-B/16 pretrained on LVD-1689M dataset
+- Place the weights in: `checkpoints/dinov3_vitb16_pretrain_lvd1689m-73cec8be.pth`
 
 ### Decoder Weights
 Only the [decoder weights](https://drive.google.com/drive/folders/1qvMJ418YFywkksFhPFsjldYpgBwOO8RH?usp=drive_link) are provided in this repository (`experiments/checkpoints/decoder.ckpt`). These weights include:
@@ -64,6 +65,9 @@ The **19-class face parsing scheme** provides detailed segmentation of facial co
 ```
 FaceParsing/
 ├── src/
+│   ├── face_parsing/
+│   │   ├── __init__.py               # Reusable inference helpers
+│   │   └── predictor.py              # FaceParsingPredictor plug-and-play API
 │   ├── models/
 │   │   ├── __init__.py
 │   │   ├── face_parsing_model.py      # PyTorch Lightning model
@@ -83,7 +87,7 @@ FaceParsing/
 │   └── checkpoints/                   # Model checkpoints
 │       └── decoder.ckpt               # Decoder-only checkpoint
 ├── checkpoints/
-│   └── dinov3_vitl16_pretrain_lvd1689m-8aa4cbdd.pth  # DINOv3 weights (download separately)
+│   └── dinov3_vitb16_pretrain_lvd1689m-73cec8be.pth  # DINOv3 weights (download separately)
 ├── data/
 │   ├── raw/                           # Raw dataset files
 │   └── processed/                     # Processed data
@@ -97,8 +101,10 @@ FaceParsing/
 ## Installation
 
 ```bash
-# Install dependencies
-pip install torch torchvision pytorch-lightning pillow numpy
+pip install -r requirements.txt
+
+# Ensure the repo is importable
+export PYTHONPATH=$PYTHONPATH:/path/to/FaceParsing/src
 ```
 
 ## Usage
@@ -110,16 +116,42 @@ Run inference on an image:
 python inference.py --input_dir path/to/image.jpg \
                    --output_dir outputs/ \
                    --checkpoint experiments/checkpoints/decoder.ckpt \
-                   --dinov3_checkpoint checkpoints/dinov3_vitl16_pretrain_lvd1689m-8aa4cbdd.pth
+                   --dinov3_checkpoint checkpoints/dinov3_vitb16_pretrain_lvd1689m-73cec8be.pth \
+                   --batch_size 1
 ```
 
 Run inference on a directory of images:
 ```bash
 python inference.py --input_dir path/to/images/ \
                    --output_dir outputs/ \
-                   --save_overlay
+                   --batch_size 16 \
+                   --no_overlay          # optional flag to skip overlay export
 ```
 
+#### FaceParsingPredictor (plug-and-play)
+
+The CLI now wraps a reusable helper at `src/face_parsing/predictor.py` so other projects can import the network directly:
+
+```python
+from src.face_parsing import FaceParsingPredictor
+
+predictor = FaceParsingPredictor(
+    checkpoint_path="experiments/checkpoints/decoder.ckpt",
+    dinov3_checkpoint_path="checkpoints/dinov3_vitb16_pretrain_lvd1689m-73cec8be.pth",
+    device="cuda",           # automatically falls back to CPU
+    image_size=(512, 512),
+)
+
+result = predictor.predict("/path/to/image.jpg")
+mask = result.numpy_mask()  # uint8 array ready for downstream tasks
+```
+
+Key APIs:
+- `predict(image, resize_to_original=True, output_device="cpu")`
+- `predict_batch(images, resize_to_original=True, output_device="cpu")`
+- `predict_directory(input_dir, output_dir, batch_size=4, save_overlay=True)`
+
+The helper accepts file paths, `PIL.Image`, `numpy.ndarray`, or `torch.Tensor` inputs and returns structured `FaceParsingSingleResult` objects containing masks, probabilities, and metadata.
 
 ### Extract Decoder Weights (if using full checkpoint)
 If you have a full checkpoint (`last.ckpt`) that includes DINOv3 weights, extract the decoder-only weights:
@@ -134,18 +166,19 @@ python extract_decoder_weights.py --checkpoint experiments/checkpoints/last.ckpt
 - `--input_dir`: Path to input image or directory
 - `--output_dir`: Path to output directory (default: `./outputs`)
 - `--checkpoint`: Path to decoder checkpoint (default: `experiments/checkpoints/decoder.ckpt`)
-- `--dinov3_checkpoint`: Path to DINOv3 checkpoint (default: `checkpoints/dinov3_vitl16_pretrain_lvd1689m-8aa4cbdd.pth`)
+- `--dinov3_checkpoint`: Path to DINOv3 checkpoint (default: `checkpoints/dinov3_vitb16_pretrain_lvd1689m-73cec8be.pth`)
 - `--device`: Device to run on (`cuda` or `cpu`)
 - `--image_size`: Input image size as height width (default: 512 512)
-- `--num_classes`: Number of segmentation classes (default: 19)
-- `--save_overlay`: Save overlay visualization
+- `--batch_size`: Number of images processed per batch (default: 16)
+- `--save_overlay`: Save overlay visualization (enabled by default)
+- `--no_overlay`: Disable overlay visualization
 - `--alpha`: Transparency for overlay visualization (default: 0.5)
 
 ## Output
 
 The model generates:
-- `*_mask.png`: Color-coded segmentation mask overlaid on the original image
-- `*_visualization.png`: Side-by-side comparison of input and segmentation (if `--save_overlay` is used)
+- `*_mask.png`: Raw segmentation mask (class indices per pixel)
+- `*_overlay.jpg`: Visualization overlay (if `--save_overlay` is used)
 
 ## Training
 
